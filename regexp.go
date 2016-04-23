@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 )
 
 // getPattern returns the specified pattern or nil.
@@ -32,7 +33,7 @@ func getPattern(ctx *cli.Context) (*regexp.Regexp, error) {
 
 // getInput returns the input file or err.
 func getInput(ctx *cli.Context, offset int) (io.Reader, error) {
-	if len(ctx.Args()) >= offset {
+	if len(ctx.Args()) > offset {
 		return os.Open(ctx.Args()[offset])
 	}
 	return os.Stdin, nil
@@ -89,5 +90,18 @@ func match(exp *regexp.Regexp, invert, multiline, onlymatching bool, r io.Reader
 func replace(exp *regexp.Regexp, repl string, multiline bool, r io.Reader, w io.Writer) error {
 	return doScan(multiline, r, w, func(buf []byte) [][]byte {
 		return [][]byte{exp.ReplaceAll(buf, []byte(repl))}
+	})
+}
+
+func split(exp *regexp.Regexp, fields []int, multiline bool, r io.Reader, w io.Writer) error {
+	return doScan(multiline, r, w, func(buf []byte) [][]byte {
+		parts := exp.Split(string(buf), -1)
+		ms := make([]string, len(fields))
+		for i, f := range fields {
+			if f < len(parts) {
+				ms[i] = parts[f]
+			}
+		}
+		return [][]byte{[]byte(strings.Join(ms, ","))}
 	})
 }

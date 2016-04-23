@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/codegangsta/cli"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func main() {
@@ -91,12 +93,33 @@ func main() {
 			ShortName: "c",
 			Usage:     "[pattern] [file]? split input lines",
 			Flags: []cli.Flag{
-				cli.IntSliceFlag{
+				cli.StringFlag{
 					Name:  "fields, f",
 					Usage: "fields to output (1-indexed)",
 				},
 			},
-			// Action:
+			Action: func(ctx *cli.Context) {},
+			After: func(ctx *cli.Context) error {
+				exp, err := getPattern(ctx)
+				if err != nil {
+					return err
+				}
+				in, err := getInput(ctx, 1)
+				if err != nil {
+					return err
+				}
+				fs := ctx.String("f")
+				fs_ := strings.Split(fs, ",")
+				fields := make([]int, len(fs_))
+				for i, f := range fs_ {
+					if f, err := strconv.ParseInt(f, 10, 32); err != nil || f < 1 {
+						return fmt.Errorf("invalid field value " + fs_[i])
+					} else {
+						fields[i] = int(f - 1)
+					}
+				}
+				return split(exp, fields, ctx.GlobalBool("m"), in, os.Stdout)
+			},
 		},
 	}
 
