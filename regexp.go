@@ -39,13 +39,15 @@ func getInput(ctx *cli.Context, offset int) (io.Reader, error) {
 	return os.Stdin, nil
 }
 
-func writeln(ms [][]byte, w io.Writer) error {
+func writeln(ms [][]byte, w io.Writer, newline bool) error {
 	for _, m := range ms {
 		if _, err := w.Write(m); err != nil {
 			return err
 		}
-		if _, err := w.Write([]byte("\n")); err != nil {
-			return err
+		if newline {
+			if _, err := w.Write([]byte("\n")); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -56,7 +58,7 @@ func doScan(multiline bool, r io.Reader, w io.Writer, proc func([]byte) [][]byte
 		// Line-by-line match.
 		scn := bufio.NewScanner(r)
 		for scn.Scan() {
-			if err := writeln(proc(scn.Bytes()), w); err != nil {
+			if err := writeln(proc(scn.Bytes()), w, true); err != nil {
 				return err
 			}
 		}
@@ -66,7 +68,7 @@ func doScan(multiline bool, r io.Reader, w io.Writer, proc func([]byte) [][]byte
 		if err != nil {
 			return err
 		}
-		return writeln(proc(buf), w)
+		return writeln(proc(buf), w, false)
 	}
 	return nil
 }
