@@ -11,8 +11,9 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "snip"
-	app.Usage = "snip, cut, trim, chop"
+	app.Usage = "snip, cut, trim, chop: a lovechild of grep and sed."
 	app.Author = "Daniel Margolis"
+	app.Version = "o_0"
 
 	// Global options.
 	app.Flags = []cli.Flag{
