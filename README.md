@@ -44,4 +44,7 @@ $ snip -h | snip m , | snip c , -f 2
  -U     swap meaning of x* and x*?
  -h             show help
  -v     print the version
+$ snip -h | snip s 'regular (\w+)' '${1} regular'|snip m regular                                                   
+    match, m    [pattern] [file]? expression regular match
+    replace, s  [pattern] [pattern] [file]? expression regular replace
  ```
