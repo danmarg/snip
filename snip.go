@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/codegangsta/cli"
 	"os"
 )
@@ -55,7 +56,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				in, err := getInput(ctx)
+				in, err := getInput(ctx, 1)
 				if err != nil {
 					return err
 				}
@@ -67,8 +68,23 @@ func main() {
 		{
 			Name:      "replace",
 			ShortName: "s",
-			Usage:     "[pattern] [file]? regular expression replace",
-			// Action:
+			Usage:     "[pattern] [pattern] [file]? regular expression replace",
+			Action:    func(ctx *cli.Context) {},
+			After: func(ctx *cli.Context) error {
+				exp, err := getPattern(ctx)
+				if err != nil {
+					return err
+				}
+				if len(ctx.Args()) < 2 {
+					return fmt.Errorf("missing required replacement pattern")
+				}
+				repl := ctx.Args().Tail()[0]
+				in, err := getInput(ctx, 2)
+				if err != nil {
+					return err
+				}
+				return replace(exp, repl, ctx.GlobalBool("m"), in, os.Stdout)
+			},
 		},
 		{
 			Name:      "split",

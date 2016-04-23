@@ -31,43 +31,31 @@ func getPattern(ctx *cli.Context) (*regexp.Regexp, error) {
 }
 
 // getInput returns the input file or err.
-func getInput(ctx *cli.Context) (io.Reader, error) {
-	if len(ctx.Args()) > 1 {
-		return os.Open(ctx.Args()[1])
+func getInput(ctx *cli.Context, offset int) (io.Reader, error) {
+	if len(ctx.Args()) >= offset {
+		return os.Open(ctx.Args()[offset])
 	}
 	return os.Stdin, nil
 }
 
-func doMatch(exp *regexp.Regexp, buf []byte, invert, onlymatching bool, w io.Writer) error {
-	if onlymatching {
-		for _, s := range exp.FindAll(buf, -1) {
-			for _, b := range [][]byte{s, []byte("\n")} {
-				if _, err := w.Write(b); err != nil {
-					return err
-				}
-			}
+func writeln(ms [][]byte, w io.Writer) error {
+	for _, m := range ms {
+		if _, err := w.Write(m); err != nil {
+			return err
 		}
-	} else {
-		if onlymatching != exp.Match(buf) {
-			for _, b := range [][]byte{buf, []byte("\n")} {
-				if _, err := w.Write(b); err != nil {
-					return err
-				}
-			}
+		if _, err := w.Write([]byte("\n")); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func match(exp *regexp.Regexp, invert, multiline, onlymatching bool, r io.Reader, w io.Writer) error {
-	if invert && onlymatching {
-		return fmt.Errorf("incompatible flags: --invert and --onlymatching")
-	}
+func doScan(multiline bool, r io.Reader, w io.Writer, proc func([]byte) [][]byte) error {
 	if !multiline {
 		// Line-by-line match.
 		scn := bufio.NewScanner(r)
 		for scn.Scan() {
-			if err := doMatch(exp, scn.Bytes(), invert, onlymatching, w); err != nil {
+			if err := writeln(proc(scn.Bytes()), w); err != nil {
 				return err
 			}
 		}
@@ -77,8 +65,29 @@ func match(exp *regexp.Regexp, invert, multiline, onlymatching bool, r io.Reader
 		if err != nil {
 			return err
 		}
-		return doMatch(exp, buf, invert, onlymatching, w)
+		return writeln(proc(buf), w)
 	}
-
 	return nil
+}
+
+func match(exp *regexp.Regexp, invert, multiline, onlymatching bool, r io.Reader, w io.Writer) error {
+	if invert && onlymatching {
+		return fmt.Errorf("incompatible flags: --invert and --onlymatching")
+	}
+	return doScan(multiline, r, w, func(buf []byte) [][]byte {
+		if onlymatching {
+			return exp.FindAll(buf, -1)
+		} else {
+			if onlymatching != exp.Match(buf) {
+				return [][]byte{buf}
+			}
+		}
+		return nil
+	})
+}
+
+func replace(exp *regexp.Regexp, repl string, multiline bool, r io.Reader, w io.Writer) error {
+	return doScan(multiline, r, w, func(buf []byte) [][]byte {
+		return [][]byte{exp.ReplaceAll(buf, []byte(repl))}
+	})
 }
