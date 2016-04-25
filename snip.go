@@ -63,13 +63,13 @@ func main() {
 				if err != nil {
 					return err
 				}
-				fname, in, err := getInput(ctx, 1)
+				ins, err := getInput(ctx, 1)
 				if err != nil {
 					return err
 				}
-				return match(fname, exp,
+				return match(exp,
 					ctx.Bool("v"), ctx.GlobalBool("m"), ctx.Bool("o"), !ctx.Bool("n"),
-					in, os.Stdout)
+					ins, os.Stdout)
 			},
 		},
 		{
@@ -86,11 +86,11 @@ func main() {
 					return fmt.Errorf("missing required replacement pattern")
 				}
 				repl := ctx.Args().Tail()[0]
-				_, in, err := getInput(ctx, 2)
+				ins, err := getInput(ctx, 2)
 				if err != nil {
 					return err
 				}
-				return replace(exp, repl, ctx.GlobalBool("m"), in, os.Stdout)
+				return replace(exp, repl, ctx.GlobalBool("m"), ins, os.Stdout)
 			},
 		},
 		{
@@ -109,7 +109,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				_, in, err := getInput(ctx, 1)
+				ins, err := getInput(ctx, 1)
 				if err != nil {
 					return err
 				}
@@ -123,7 +123,7 @@ func main() {
 						fields[i] = int(f - 1)
 					}
 				}
-				return split(exp, fields, ctx.GlobalBool("m"), in, os.Stdout)
+				return split(exp, fields, ctx.GlobalBool("m"), ins, os.Stdout)
 			},
 		},
 	}
