@@ -51,6 +51,10 @@ func main() {
 					Name:  "onlymatching, o",
 					Usage: "output only matching",
 				},
+				cli.BoolFlag{
+					Name:  "nofilename, n",
+					Usage: "hide filename prefix",
+				},
 			},
 			// Use After so we get error handling for free.
 			Action: func(ctx *cli.Context) {},
@@ -59,12 +63,12 @@ func main() {
 				if err != nil {
 					return err
 				}
-				in, err := getInput(ctx, 1)
+				fname, in, err := getInput(ctx, 1)
 				if err != nil {
 					return err
 				}
-				return match(exp,
-					ctx.Bool("v"), ctx.GlobalBool("m"), ctx.Bool("o"),
+				return match(fname, exp,
+					ctx.Bool("v"), ctx.GlobalBool("m"), ctx.Bool("o"), !ctx.Bool("n"),
 					in, os.Stdout)
 			},
 		},
@@ -82,7 +86,7 @@ func main() {
 					return fmt.Errorf("missing required replacement pattern")
 				}
 				repl := ctx.Args().Tail()[0]
-				in, err := getInput(ctx, 2)
+				_, in, err := getInput(ctx, 2)
 				if err != nil {
 					return err
 				}
@@ -105,7 +109,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				in, err := getInput(ctx, 1)
+				_, in, err := getInput(ctx, 1)
 				if err != nil {
 					return err
 				}

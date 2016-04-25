@@ -32,11 +32,13 @@ func getPattern(ctx *cli.Context) (*regexp.Regexp, error) {
 }
 
 // getInput returns the input file or err.
-func getInput(ctx *cli.Context, offset int) (io.Reader, error) {
+func getInput(ctx *cli.Context, offset int) (*string, io.Reader, error) {
 	if len(ctx.Args()) > offset {
-		return os.Open(ctx.Args()[offset])
+		n := ctx.Args()[offset]
+		f, e := os.Open(n)
+		return &n, f, e
 	}
-	return os.Stdin, nil
+	return nil, os.Stdin, nil
 }
 
 func writeln(ms [][]byte, w io.Writer, newline bool) error {
@@ -73,16 +75,36 @@ func doScan(multiline bool, r io.Reader, w io.Writer, proc func([]byte) [][]byte
 	return nil
 }
 
-func match(exp *regexp.Regexp, invert, multiline, onlymatching bool, r io.Reader, w io.Writer) error {
+func prefix(fname *string, line []byte) []byte {
+	if fname == nil {
+		return line
+	}
+	return append([]byte(*fname+": "), line...)
+}
+
+func match(fname *string, exp *regexp.Regexp,
+	invert, multiline, onlymatching, filenames bool,
+	r io.Reader, w io.Writer) error {
 	if invert && onlymatching {
 		return fmt.Errorf("incompatible flags: --invert and --onlymatching")
 	}
 	return doScan(multiline, r, w, func(buf []byte) [][]byte {
 		if onlymatching {
-			return exp.FindAll(buf, -1)
+			r := exp.FindAll(buf, -1)
+			if filenames {
+				for i, x := range r {
+					// Add filename.
+					r[i] = prefix(fname, x)
+				}
+			}
+			return r
 		} else {
 			if onlymatching != exp.Match(buf) {
-				return [][]byte{buf}
+				if filenames {
+					return [][]byte{prefix(fname, buf)}
+				} else {
+					return [][]byte{buf}
+				}
 			}
 		}
 		return nil
