@@ -114,7 +114,7 @@ func match(exp *regexp.Regexp,
 				}
 				return ms
 			} else {
-				if onlymatching != exp.Match(buf) {
+				if invert != exp.Match(buf) {
 					if filenames {
 						return [][]byte{prefix(r.Name, buf)}
 					} else {
