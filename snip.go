@@ -68,7 +68,9 @@ func main() {
 					return err
 				}
 				return match(exp,
-					ctx.Bool("v"), ctx.GlobalBool("m"), ctx.Bool("o"), !ctx.Bool("n"),
+					ctx.Bool("v"), ctx.GlobalBool("m"), ctx.Bool("o"),
+					// Don't print filenames if there's only one!
+					len(ins) > 1 && !ctx.Bool("n"),
 					ins, os.Stdout)
 			},
 		},
