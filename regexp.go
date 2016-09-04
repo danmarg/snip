@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -37,17 +38,37 @@ type namedReader struct {
 }
 
 // getInput returns the input reader(s) or error.
-func getInput(ctx *cli.Context, offset int) ([]namedReader, error) {
+func getInput(ctx *cli.Context, offset int, recursive bool) ([]namedReader, error) {
 	if len(ctx.Args()) > offset {
 		ms := ctx.Args()[offset:]
-		ns := make([]namedReader, len(ms))
-		for i, m := range ms {
-			m := m
+		ns := []namedReader{}
+		for _, m := range ms {
+			fi, err := os.Stat(m)
+			if err != nil {
+				return nil, err
+			}
+			if fi.IsDir() {
+				if !recursive {
+					return nil, fmt.Errorf("directory given but --recursive not specified")
+				}
+				if err := filepath.Walk(m, func(m string, fi os.FileInfo, err error) error {
+					if !fi.IsDir() {
+						f, err := os.Open(m)
+						if err != nil {
+							return err
+						}
+						ns = append(ns, namedReader{&m, f})
+					}
+					return nil
+				}); err != nil {
+					return nil, err
+				}
+			}
 			f, err := os.Open(m)
 			if err != nil {
 				return nil, err
 			}
-			ns[i] = namedReader{&m, f}
+			ns = append(ns, namedReader{&m, f})
 		}
 		return ns, nil
 	} else {
