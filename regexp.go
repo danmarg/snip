@@ -31,12 +31,28 @@ func getPattern(ctx *cli.Context) (*regexp.Regexp, error) {
 	return regexp.Compile(exp)
 }
 
-// getInput returns the input file or err.
-func getInput(ctx *cli.Context, offset int) (io.Reader, error) {
+type namedReader struct {
+	Name   *string
+	Reader io.Reader
+}
+
+// getInput returns the input reader(s) or error.
+func getInput(ctx *cli.Context, offset int) ([]namedReader, error) {
 	if len(ctx.Args()) > offset {
-		return os.Open(ctx.Args()[offset])
+		ms := ctx.Args()[offset:]
+		ns := make([]namedReader, len(ms))
+		for i, m := range ms {
+			m := m
+			f, err := os.Open(m)
+			if err != nil {
+				return nil, err
+			}
+			ns[i] = namedReader{&m, f}
+		}
+		return ns, nil
+	} else {
+		return []namedReader{{nil, os.Stdin}}, nil
 	}
-	return os.Stdin, nil
 }
 
 func writeln(ms [][]byte, w io.Writer, newline bool) error {
@@ -73,37 +89,72 @@ func doScan(multiline bool, r io.Reader, w io.Writer, proc func([]byte) [][]byte
 	return nil
 }
 
-func match(exp *regexp.Regexp, invert, multiline, onlymatching bool, r io.Reader, w io.Writer) error {
+func prefix(fname *string, line []byte) []byte {
+	if fname == nil {
+		return line
+	}
+	return append([]byte(*fname+": "), line...)
+}
+
+func match(exp *regexp.Regexp,
+	invert, multiline, onlymatching, filenames bool,
+	rs []namedReader, w io.Writer) error {
 	if invert && onlymatching {
 		return fmt.Errorf("incompatible flags: --invert and --onlymatching")
 	}
-	return doScan(multiline, r, w, func(buf []byte) [][]byte {
-		if onlymatching {
-			return exp.FindAll(buf, -1)
-		} else {
-			if onlymatching != exp.Match(buf) {
-				return [][]byte{buf}
+	for _, r := range rs {
+		if err := doScan(multiline, r.Reader, w, func(buf []byte) [][]byte {
+			if onlymatching {
+				ms := exp.FindAll(buf, -1)
+				if filenames {
+					for i, x := range ms {
+						// Add filename.
+						ms[i] = prefix(r.Name, x)
+					}
+				}
+				return ms
+			} else {
+				if invert != exp.Match(buf) {
+					if filenames {
+						return [][]byte{prefix(r.Name, buf)}
+					} else {
+						return [][]byte{buf}
+					}
+				}
 			}
+			return nil
+		}); err != nil {
+			return err
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
-func replace(exp *regexp.Regexp, repl string, multiline bool, r io.Reader, w io.Writer) error {
-	return doScan(multiline, r, w, func(buf []byte) [][]byte {
-		return [][]byte{exp.ReplaceAll(buf, []byte(repl))}
-	})
+func replace(exp *regexp.Regexp, repl string, multiline bool, rs []namedReader, w io.Writer) error {
+	for _, r := range rs {
+		if err := doScan(multiline, r.Reader, w, func(buf []byte) [][]byte {
+			return [][]byte{exp.ReplaceAll(buf, []byte(repl))}
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func split(exp *regexp.Regexp, fields []int, multiline bool, r io.Reader, w io.Writer) error {
-	return doScan(multiline, r, w, func(buf []byte) [][]byte {
-		parts := exp.Split(string(buf), -1)
-		ms := make([]string, len(fields))
-		for i, f := range fields {
-			if f < len(parts) {
-				ms[i] = parts[f]
+func split(exp *regexp.Regexp, fields []int, multiline bool, rs []namedReader, w io.Writer) error {
+	for _, r := range rs {
+		if err := doScan(multiline, r.Reader, w, func(buf []byte) [][]byte {
+			parts := exp.Split(string(buf), -1)
+			ms := make([]string, len(fields))
+			for i, f := range fields {
+				if f < len(parts) {
+					ms[i] = parts[f]
+				}
 			}
+			return [][]byte{[]byte(strings.Join(ms, ","))}
+		}); err != nil {
+			return err
 		}
-		return [][]byte{[]byte(strings.Join(ms, ","))}
-	})
+	}
+	return nil
 }

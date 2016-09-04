@@ -51,6 +51,10 @@ func main() {
 					Name:  "onlymatching, o",
 					Usage: "output only matching",
 				},
+				cli.BoolFlag{
+					Name:  "nofilename, n",
+					Usage: "hide filename prefix",
+				},
 			},
 			// Use After so we get error handling for free.
 			Action: func(ctx *cli.Context) {},
@@ -59,13 +63,15 @@ func main() {
 				if err != nil {
 					return err
 				}
-				in, err := getInput(ctx, 1)
+				ins, err := getInput(ctx, 1)
 				if err != nil {
 					return err
 				}
 				return match(exp,
 					ctx.Bool("v"), ctx.GlobalBool("m"), ctx.Bool("o"),
-					in, os.Stdout)
+					// Don't print filenames if there's only one!
+					len(ins) > 1 && !ctx.Bool("n"),
+					ins, os.Stdout)
 			},
 		},
 		{
@@ -82,11 +88,11 @@ func main() {
 					return fmt.Errorf("missing required replacement pattern")
 				}
 				repl := ctx.Args().Tail()[0]
-				in, err := getInput(ctx, 2)
+				ins, err := getInput(ctx, 2)
 				if err != nil {
 					return err
 				}
-				return replace(exp, repl, ctx.GlobalBool("m"), in, os.Stdout)
+				return replace(exp, repl, ctx.GlobalBool("m"), ins, os.Stdout)
 			},
 		},
 		{
@@ -105,7 +111,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				in, err := getInput(ctx, 1)
+				ins, err := getInput(ctx, 1)
 				if err != nil {
 					return err
 				}
@@ -119,7 +125,7 @@ func main() {
 						fields[i] = int(f - 1)
 					}
 				}
-				return split(exp, fields, ctx.GlobalBool("m"), in, os.Stdout)
+				return split(exp, fields, ctx.GlobalBool("m"), ins, os.Stdout)
 			},
 		},
 	}
