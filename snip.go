@@ -34,6 +34,11 @@ func main() {
 			Name:  "ungreedy, U",
 			Usage: "swap meaning of x* and x*?, x+ and x+?",
 		},
+		// input control
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "recursive",
+		},
 	}
 
 	// Commands.
@@ -59,7 +64,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				in, err := getInput(ctx, 1)
+				in, err := getInput(ctx, 1, ctx.GlobalBool("r"))
 				if err != nil {
 					return err
 				}
@@ -82,7 +87,7 @@ func main() {
 					return fmt.Errorf("missing required replacement pattern")
 				}
 				repl := ctx.Args().Tail()[0]
-				in, err := getInput(ctx, 2)
+				in, err := getInput(ctx, 2, ctx.GlobalBool("r"))
 				if err != nil {
 					return err
 				}
@@ -105,7 +110,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				in, err := getInput(ctx, 1)
+				in, err := getInput(ctx, 1, ctx.GlobalBool("r"))
 				if err != nil {
 					return err
 				}
