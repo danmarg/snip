@@ -22,6 +22,7 @@ GLOBAL OPTIONS:
    --multiline, -m      multiline
    --dotall, -s         let . match \n
    --ungreedy, -U       swap meaning of x* and x*?, x+ and x+?
+   --recursive, -r    recursive input
 ```
 
 A few lame examples:
