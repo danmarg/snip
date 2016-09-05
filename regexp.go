@@ -57,6 +57,7 @@ func getInput(ctx *cli.Context, offset int, recursive bool) ([]namedReader, erro
 						if err != nil {
 							return err
 						}
+						m := m
 						ns = append(ns, namedReader{&m, f})
 					}
 					return nil
@@ -68,6 +69,7 @@ func getInput(ctx *cli.Context, offset int, recursive bool) ([]namedReader, erro
 			if err != nil {
 				return nil, err
 			}
+			m := m
 			ns = append(ns, namedReader{&m, f})
 		}
 		return ns, nil
